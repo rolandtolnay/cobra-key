@@ -6,6 +6,10 @@
 
 CobraKey sits in your menu bar and turns extra mouse button presses into keyboard shortcuts. Press a side button, get a keystroke — with any modifier combination you want. No drivers, no bloatware, no dock icon.
 
+<p align="center">
+  <img src="assets/cobra-key-ui.webp" alt="CobraKey menubar dropdown" width="300">
+</p>
+
 Built because Razer's macOS software doesn't support the Cobra mouse, but works with any mouse that has extra buttons.
 
 ## Features
