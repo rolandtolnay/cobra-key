@@ -1,23 +1,63 @@
-import Foundation
+import Cocoa
 
 enum Settings {
     private enum Keys {
         static let isEnabled = "isEnabled"
-        static let buttonA = "buttonA"
-        static let buttonB = "buttonB"
         static let swallowEvents = "swallowEvents"
         static let hasShownPermissionHelp = "hasShownPermissionHelp"
+        static let mappings = "mappings"
+
+        // Legacy keys (used only during migration)
+        static let buttonA = "buttonA"
+        static let buttonB = "buttonB"
     }
 
     /// Call once in applicationDidFinishLaunching
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
             Keys.isEnabled: true,
-            Keys.buttonA: 5,
-            Keys.buttonB: 4,
             Keys.swallowEvents: true,
             Keys.hasShownPermissionHelp: false,
         ])
+    }
+
+    /// Converts old buttonA/buttonB settings to ButtonMapping entries.
+    /// Safe to call multiple times; only migrates if legacy keys exist.
+    static func migrateIfNeeded() {
+        let ud = UserDefaults.standard
+        let hasA = ud.object(forKey: Keys.buttonA) != nil
+        let hasB = ud.object(forKey: Keys.buttonB) != nil
+        guard hasA || hasB else { return }
+
+        var migrated: [ButtonMapping] = []
+
+        if hasA {
+            let button = ud.integer(forKey: Keys.buttonA)
+            migrated.append(ButtonMapping(
+                id: UUID(),
+                mouseButton: button,
+                keyCode: 0x1F,    // O
+                modifierFlags: CGEventFlags.maskControl.rawValue
+            ))
+        }
+
+        if hasB {
+            let button = ud.integer(forKey: Keys.buttonB)
+            // Avoid duplicate if both were mapped to the same mouse button
+            if !migrated.contains(where: { $0.mouseButton == button }) {
+                migrated.append(ButtonMapping(
+                    id: UUID(),
+                    mouseButton: button,
+                    keyCode: 0x0E,    // E
+                    modifierFlags: CGEventFlags.maskControl.rawValue
+                ))
+            }
+        }
+
+        // Write migrated mappings and remove legacy keys
+        mappings = migrated
+        ud.removeObject(forKey: Keys.buttonA)
+        ud.removeObject(forKey: Keys.buttonB)
     }
 
     // MARK: - Bool properties
@@ -37,33 +77,18 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: Keys.hasShownPermissionHelp) }
     }
 
-    // MARK: - Optional Int properties
+    // MARK: - Mappings
 
-    static var buttonA: Int? {
+    static var mappings: [ButtonMapping] {
         get {
-            guard UserDefaults.standard.object(forKey: Keys.buttonA) != nil else { return nil }
-            return UserDefaults.standard.integer(forKey: Keys.buttonA)
+            guard let data = UserDefaults.standard.data(forKey: Keys.mappings) else {
+                return []
+            }
+            return (try? JSONDecoder().decode([ButtonMapping].self, from: data)) ?? []
         }
         set {
-            if let newValue {
-                UserDefaults.standard.set(newValue, forKey: Keys.buttonA)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.buttonA)
-            }
-        }
-    }
-
-    static var buttonB: Int? {
-        get {
-            guard UserDefaults.standard.object(forKey: Keys.buttonB) != nil else { return nil }
-            return UserDefaults.standard.integer(forKey: Keys.buttonB)
-        }
-        set {
-            if let newValue {
-                UserDefaults.standard.set(newValue, forKey: Keys.buttonB)
-            } else {
-                UserDefaults.standard.removeObject(forKey: Keys.buttonB)
-            }
+            let data = try? JSONEncoder().encode(newValue)
+            UserDefaults.standard.set(data, forKey: Keys.mappings)
         }
     }
 }

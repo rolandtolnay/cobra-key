@@ -10,19 +10,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var eventTapManager: EventTapManager!
 
     private var enabledItem: NSMenuItem!
-    private var learnAItem: NSMenuItem!
-    private var learnBItem: NSMenuItem!
+    private var addMappingItem: NSMenuItem!
     private var swallowItem: NSMenuItem!
     private var loginItem: NSMenuItem!
 
-    private enum LearnTarget { case a, b }
-    private var learnTarget: LearnTarget?
+    private var recorderPanel: ShortcutRecorderPanel?
+    private var cachedMappings: [ButtonMapping] = []
+
+    private static let mappingTagBase = 1000
 
     // MARK: - App Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         os_log(.error, log: log, "applicationDidFinishLaunching called")
         Settings.registerDefaults()
+        Settings.migrateIfNeeded()
+        reloadMappings()
         setupStatusItem()
         buildMenu()
         eventTapManager = EventTapManager()
@@ -40,6 +43,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
         true
+    }
+
+    // MARK: - Mappings Cache
+
+    private func reloadMappings() {
+        cachedMappings = Settings.mappings
     }
 
     // MARK: - Status Item & Menu
@@ -71,23 +80,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        // Learn Button A
-        learnAItem = NSMenuItem(
-            title: learnTitle(for: .a),
-            action: #selector(learnButtonA(_:)),
+        // Add Mapping... (sentinel tag -1)
+        addMappingItem = NSMenuItem(
+            title: "Add Mapping...",
+            action: #selector(addMapping(_:)),
             keyEquivalent: ""
         )
-        learnAItem.target = self
-        menu.addItem(learnAItem)
-
-        // Learn Button B
-        learnBItem = NSMenuItem(
-            title: learnTitle(for: .b),
-            action: #selector(learnButtonB(_:)),
-            keyEquivalent: ""
-        )
-        learnBItem.target = self
-        menu.addItem(learnBItem)
+        addMappingItem.target = self
+        addMappingItem.tag = -1
+        menu.addItem(addMappingItem)
 
         menu.addItem(.separator())
 
@@ -131,14 +132,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         sender.state = Settings.isEnabled ? .on : .off
     }
 
-    @objc private func learnButtonA(_ sender: NSMenuItem) {
-        learnTarget = .a
-        learnAItem.title = "Press the mouse button now..."
+    @objc private func addMapping(_ sender: NSMenuItem) {
+        let panel = ShortcutRecorderPanel()
+        panel.recorderDelegate = self
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        recorderPanel = panel
     }
 
-    @objc private func learnButtonB(_ sender: NSMenuItem) {
-        learnTarget = .b
-        learnBItem.title = "Press the mouse button now..."
+    @objc private func mappingClicked(_ sender: NSMenuItem) {
+        let index = sender.tag - Self.mappingTagBase
+        guard index >= 0, index < cachedMappings.count else { return }
+
+        let mapping = cachedMappings[index]
+
+        let alert = NSAlert()
+        alert.messageText = "Delete Mapping?"
+        alert.informativeText = "Remove \"\(mapping.displayTitle)\"?"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        var all = Settings.mappings
+        all.removeAll { $0.id == mapping.id }
+        Settings.mappings = all
+        reloadMappings()
     }
 
     @objc private func toggleSwallow(_ sender: NSMenuItem) {
@@ -168,68 +188,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         sender.state = SMAppService.mainApp.status == .enabled ? .on : .off
     }
 
-    // MARK: - Learn Title Helper
-
-    private enum MappedButton { case a, b }
-
-    private func learnTitle(for button: MappedButton) -> String {
-        let label = button == .a ? "A" : "B"
-        let shortcut = button == .a ? "Ctrl+O" : "Ctrl+E"
-        let num: Int?
-        switch button {
-        case .a: num = Settings.buttonA
-        case .b: num = Settings.buttonB
-        }
-        if let num {
-            return "Learn Button \(label) (button \(num) \u{2192} \(shortcut))"
-        }
-        return "Learn Button \(label)..."
-    }
-
     // MARK: - Event Tap Wiring
 
     private func wireEventTap() {
         eventTapManager.onMouseButton = { [weak self] buttonNumber, isDown in
             guard let self else { return false }
 
-            // Learn mode: capture button on down press
-            if isDown, let target = self.learnTarget {
-                // Clear learn target immediately to avoid capturing rapid extra clicks.
-                self.learnTarget = nil
-                let learnedButton = Int(buttonNumber)
-
-                switch target {
-                case .a:
-                    Settings.buttonA = learnedButton
-                    if Settings.buttonB == learnedButton {
-                        Settings.buttonB = nil
-                    }
-                case .b:
-                    Settings.buttonB = learnedButton
-                    if Settings.buttonA == learnedButton {
-                        Settings.buttonA = nil
-                    }
-                }
-
-                self.learnAItem.title = self.learnTitle(for: .a)
-                self.learnBItem.title = self.learnTitle(for: .b)
-                return true // Swallow the learn press
+            // Recorder mode: route mouse button to the active panel
+            if isDown, let panel = self.recorderPanel, panel.isWaitingForMouseButton {
+                panel.didCaptureMouseButton(Int(buttonNumber))
+                return true // Swallow the capture press
             }
 
             // Normal mode
             guard Settings.isEnabled else { return false }
 
-            if buttonNumber == Int64(Settings.buttonA ?? -1) {
-                if isDown { KeySynthesizer.postCtrlO() }
-                return Settings.swallowEvents
+            let button = Int(buttonNumber)
+            guard let mapping = self.cachedMappings.first(where: { $0.mouseButton == button }) else {
+                return false
             }
 
-            if buttonNumber == Int64(Settings.buttonB ?? -1) {
-                if isDown { KeySynthesizer.postCtrlE() }
-                return Settings.swallowEvents
+            if isDown {
+                KeySynthesizer.postKeystroke(
+                    keyCode: CGKeyCode(mapping.keyCode),
+                    flags: CGEventFlags(rawValue: mapping.modifierFlags)
+                )
             }
-
-            return false
+            return Settings.swallowEvents
         }
     }
 
@@ -279,9 +264,56 @@ extension AppDelegate: NSMenuDelegate {
         swallowItem.state = Settings.swallowEvents ? .on : .off
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
 
-        if learnTarget == nil {
-            learnAItem.title = learnTitle(for: .a)
-            learnBItem.title = learnTitle(for: .b)
+        // Remove stale dynamic mapping items
+        let staleItems = menu.items.filter { $0.tag >= Self.mappingTagBase }
+        for item in staleItems {
+            menu.removeItem(item)
         }
+
+        // Insert current mappings before "Add Mapping..." item
+        reloadMappings()
+        guard let addIndex = menu.items.firstIndex(where: { $0.tag == -1 }) else { return }
+
+        for (i, mapping) in cachedMappings.enumerated() {
+            let item = NSMenuItem(
+                title: mapping.displayTitle,
+                action: #selector(mappingClicked(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.tag = Self.mappingTagBase + i
+            menu.insertItem(item, at: addIndex + i)
+        }
+    }
+}
+
+// MARK: - ShortcutRecorderDelegate
+
+extension AppDelegate: ShortcutRecorderDelegate {
+    func shortcutRecorder(_ panel: ShortcutRecorderPanel, didRecord mapping: ButtonMapping) {
+        recorderPanel = nil
+
+        var all = Settings.mappings
+
+        // Check for duplicate mouse button
+        if let existingIndex = all.firstIndex(where: { $0.mouseButton == mapping.mouseButton }) {
+            let existing = all[existingIndex]
+            let alert = NSAlert()
+            alert.messageText = "Replace Existing Mapping?"
+            alert.informativeText = "Button \(mapping.mouseButton) is already mapped to \"\(existing.displayTitle)\". Replace it?"
+            alert.addButton(withTitle: "Replace")
+            alert.addButton(withTitle: "Cancel")
+
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            all.remove(at: existingIndex)
+        }
+
+        all.append(mapping)
+        Settings.mappings = all
+        reloadMappings()
+    }
+
+    func shortcutRecorderDidCancel(_ panel: ShortcutRecorderPanel) {
+        recorderPanel = nil
     }
 }

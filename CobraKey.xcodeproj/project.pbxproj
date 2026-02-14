@@ -14,6 +14,8 @@
 		AA000005000000000000001A /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000500000000000000AA /* Settings.swift */; };
 		AA000006000000000000001A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000600000000000000BB /* main.swift */; };
 		AA000008000000000000001A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA00000800000000000000AA /* Assets.xcassets */; };
+		AA000009000000000000001A /* ButtonMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000900000000000000CC /* ButtonMapping.swift */; };
+		AA00000A000000000000001A /* ShortcutRecorderPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000A00000000000000CC /* ShortcutRecorderPanel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +29,8 @@
 		AA00000700000000000000AA /* CobraKey.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CobraKey.entitlements; sourceTree = "<group>"; };
 		AA00000800000000000000AA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA00000900000000000000AA /* CobraKey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CobraKey.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA00000900000000000000CC /* ButtonMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonMapping.swift; sourceTree = "<group>"; };
+		AA00000A00000000000000CC /* ShortcutRecorderPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorderPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,10 +57,12 @@
 			children = (
 				AA00000600000000000000BB /* main.swift */,
 				AA00000100000000000000AA /* AppDelegate.swift */,
+				AA00000900000000000000CC /* ButtonMapping.swift */,
 				AA00000200000000000000AA /* EventTapManager.swift */,
 				AA00000300000000000000AA /* KeySynthesizer.swift */,
 				AA00000400000000000000AA /* PermissionManager.swift */,
 				AA00000500000000000000AA /* Settings.swift */,
+				AA00000A00000000000000CC /* ShortcutRecorderPanel.swift */,
 				AA00000800000000000000AA /* Assets.xcassets */,
 				AA00000600000000000000AA /* Info.plist */,
 				AA00000700000000000000AA /* CobraKey.entitlements */,
@@ -142,10 +148,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000001000000000000001A /* AppDelegate.swift in Sources */,
+				AA000009000000000000001A /* ButtonMapping.swift in Sources */,
 				AA000002000000000000001A /* EventTapManager.swift in Sources */,
 				AA000003000000000000001A /* KeySynthesizer.swift in Sources */,
 				AA000004000000000000001A /* PermissionManager.swift in Sources */,
 				AA000005000000000000001A /* Settings.swift in Sources */,
+				AA00000A000000000000001A /* ShortcutRecorderPanel.swift in Sources */,
 				AA000006000000000000001A /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
