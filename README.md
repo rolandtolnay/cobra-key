@@ -23,11 +23,14 @@ Built because Razer's macOS software doesn't support the Cobra mouse, but works 
 
 **Requirements:** macOS 13.0 (Ventura) or later
 
-1. Download `CobraKey.app` from [GitHub Releases](../../releases)
-2. Move it to your Applications folder
-3. Open CobraKey — it appears in your menu bar as a mouse icon
-4. Grant Accessibility permission when prompted (required to capture mouse events)
-5. Click the menu bar icon → **Add Mapping...** → press a mouse button → press a keyboard shortcut
+1. Download `CobraKey.zip` from [GitHub Releases](../../releases)
+2. Unzip and move `CobraKey.app` to your Applications folder
+3. On first open, macOS will block the app because it's not notarized. To allow it:
+   - Right-click `CobraKey.app` → **Open** → click **Open** in the dialog
+   - Or run: `xattr -cr /Applications/CobraKey.app`
+4. Open CobraKey — it appears in your menu bar as a mouse icon
+5. Grant Accessibility permission when prompted (required to capture mouse events)
+6. Click the menu bar icon → **Add Mapping...** → press a mouse button → press a keyboard shortcut
 
 That's it. The mapping is active immediately.
 
