@@ -73,6 +73,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.delegate = self
 
+        // Version label
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let versionItem = NSMenuItem(title: "CobraKey v\(version)", action: nil, keyEquivalent: "")
+        versionItem.isEnabled = false
+        menu.addItem(versionItem)
+
+        menu.addItem(.separator())
+
         // Enabled checkbox
         enabledItem = NSMenuItem(
             title: "Enabled",
