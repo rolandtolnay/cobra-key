@@ -243,8 +243,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func checkPermissionsAndStart() {
         let granted = PermissionManager.isAccessibilityGranted()
-        os_log(.info, log: log, "Accessibility granted: %{public}@", granted ? "YES" : "NO")
-        os_log(.info, log: log, "hasShownPermissionHelp: %{public}@", Settings.hasShownPermissionHelp ? "YES" : "NO")
+        os_log(.error, log: log, "Accessibility granted: %{public}@", granted ? "YES" : "NO")
 
         if granted {
             startEventTap()
@@ -253,7 +252,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 os_log(.info, log: log, "Showing permission alert")
                 PermissionManager.showPermissionAlert()
             } else {
-                os_log(.info, log: log, "Skipping alert (already shown)")
+                os_log(.info, log: log, "Prompting accessibility (already shown help)")
+                PermissionManager.promptAccessibility()
             }
             PermissionManager.startPollingForPermission { [weak self] in
                 os_log(.info, log: log, "Permission granted via polling, starting event tap")
@@ -264,7 +264,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startEventTap() {
         let success = eventTapManager.start()
-        os_log(.info, log: log, "Event tap start result: %{public}@", success ? "SUCCESS" : "FAILED")
+        os_log(.error, log: log, "Event tap start result: %{public}@", success ? "SUCCESS" : "FAILED")
     }
 
     private func showErrorAlert(title: String, message: String) {
