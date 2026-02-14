@@ -9,7 +9,7 @@ final class ShortcutRecorderPanel: NSPanel {
 
     weak var recorderDelegate: ShortcutRecorderDelegate?
 
-    private var capturedMouseButton: Int?
+    private(set) var capturedMouseButton: Int?
     private let instructionLabel = NSTextField(labelWithString: "")
     private let cancelButton = NSButton(title: "Cancel", target: nil, action: nil)
     private var captureView: ShortcutCaptureView?
@@ -71,7 +71,7 @@ final class ShortcutRecorderPanel: NSPanel {
     }
 
     private func showStep2() {
-        instructionLabel.stringValue = "Now press the keyboard shortcut..."
+        instructionLabel.stringValue = "Button \(capturedMouseButton!) captured.\nNow press the keyboard shortcut..."
 
         let capture = ShortcutCaptureView()
         capture.onKeyCapture = { [weak self] keyCode, modifierFlags in

@@ -22,7 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - App Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        os_log(.error, log: log, "applicationDidFinishLaunching called")
+        os_log(.info, log: log, "applicationDidFinishLaunching called")
         Settings.registerDefaults()
         Settings.migrateIfNeeded()
         reloadMappings()
@@ -31,6 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         eventTapManager = EventTapManager()
         wireEventTap()
         checkPermissionsAndStart()
+        updateStatusIcon()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -64,6 +65,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func updateStatusIcon() {
+        statusItem.button?.appearsDisabled = !Settings.isEnabled
+    }
+
     private func buildMenu() {
         let menu = NSMenu()
         menu.delegate = self
@@ -92,9 +97,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        // Swallow Events checkbox
+        // Block Original Click checkbox
         swallowItem = NSMenuItem(
-            title: "Swallow Events",
+            title: "Block Original Click",
             action: #selector(toggleSwallow(_:)),
             keyEquivalent: ""
         )
@@ -130,9 +135,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleEnabled(_ sender: NSMenuItem) {
         Settings.isEnabled.toggle()
         sender.state = Settings.isEnabled ? .on : .off
+        updateStatusIcon()
     }
 
     @objc private func addMapping(_ sender: NSMenuItem) {
+        recorderPanel?.close()
         let panel = ShortcutRecorderPanel()
         panel.recorderDelegate = self
         panel.makeKeyAndOrderFront(nil)
@@ -200,6 +207,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 return true // Swallow the capture press
             }
 
+            // Recorder mode: swallow mouse-up for the button being recorded
+            if !isDown, let panel = self.recorderPanel,
+               panel.capturedMouseButton == Int(buttonNumber) {
+                return true
+            }
+
             // Normal mode
             guard Settings.isEnabled else { return false }
 
@@ -222,20 +235,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func checkPermissionsAndStart() {
         let granted = PermissionManager.isAccessibilityGranted()
-        os_log(.error, log: log, "Accessibility granted: %{public}@", granted ? "YES" : "NO")
-        os_log(.error, log: log, "hasShownPermissionHelp: %{public}@", Settings.hasShownPermissionHelp ? "YES" : "NO")
+        os_log(.info, log: log, "Accessibility granted: %{public}@", granted ? "YES" : "NO")
+        os_log(.info, log: log, "hasShownPermissionHelp: %{public}@", Settings.hasShownPermissionHelp ? "YES" : "NO")
 
         if granted {
             startEventTap()
         } else {
             if !Settings.hasShownPermissionHelp {
-                os_log(.error, log: log, "Showing permission alert")
+                os_log(.info, log: log, "Showing permission alert")
                 PermissionManager.showPermissionAlert()
             } else {
-                os_log(.error, log: log, "Skipping alert (already shown)")
+                os_log(.info, log: log, "Skipping alert (already shown)")
             }
             PermissionManager.startPollingForPermission { [weak self] in
-                os_log(.error, log: log, "Permission granted via polling, starting event tap")
+                os_log(.info, log: log, "Permission granted via polling, starting event tap")
                 self?.startEventTap()
             }
         }
@@ -243,7 +256,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startEventTap() {
         let success = eventTapManager.start()
-        os_log(.error, log: log, "Event tap start result: %{public}@", success ? "SUCCESS" : "FAILED")
+        os_log(.info, log: log, "Event tap start result: %{public}@", success ? "SUCCESS" : "FAILED")
     }
 
     private func showErrorAlert(title: String, message: String) {
