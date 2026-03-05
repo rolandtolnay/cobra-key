@@ -56,6 +56,22 @@ git clone https://github.com/rolandtolnay/cobra-key.git
 
 Open `CobraKey.xcodeproj` in Xcode and build (Cmd+B). The app requires Accessibility permission, so it cannot be sandboxed or distributed through the Mac App Store.
 
+### Install script
+
+A convenience script builds, installs to `/Applications`, and launches the app:
+
+```bash
+./install.sh
+```
+
+If you have an Apple Developer account, set your team ID for stable code signing. This prevents macOS from forgetting the Accessibility permission after each rebuild:
+
+```bash
+DEVELOPMENT_TEAM=YOUR_TEAM_ID ./install.sh
+```
+
+Without a team ID the app uses ad-hoc signing, which works fine but may require re-granting Accessibility permission after rebuilding.
+
 ## How It Works
 
 CobraKey uses macOS [CGEventTap](https://developer.apple.com/documentation/coregraphics/cgeventtap) to intercept mouse button events system-wide, then posts synthetic keyboard events via [CGEvent](https://developer.apple.com/documentation/coregraphics/cgevent). This requires Accessibility permission — the app will guide you through granting it on first launch.
